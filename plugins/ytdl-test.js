@@ -35,9 +35,6 @@ async (conn, mek, m, { from, args, q, reply }) => {
         reply(`An error occurred: ${e.message}`);
     }
 });
-const { cmd } = require('../command');
-const { ytdlv1 } = require('@vioo/apis');
-const yts = require("yt-search");
 
 cmd({
     pattern: "ytmp3",
