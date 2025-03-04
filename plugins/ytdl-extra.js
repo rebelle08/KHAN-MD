@@ -10,14 +10,13 @@ cmd({
   filename: __filename
 }, async (conn, m, store, { from, quoted, args, q, reply }) => {
   try {
-    if (!q) {
-      return reply("*`Please provide a YouTube link or title!`*");
-    }
+    if (!q) return reply("*`Please provide a YouTube link or title!`*");
 
     await conn.sendMessage(from, { react: { text: '⏳', key: m.key } });
 
     let videoUrl = q;
     let searchData = null;
+    let videoID = null;
 
     // If the user provides a title instead of a link
     if (!q.startsWith("https://")) {
@@ -26,6 +25,11 @@ cmd({
 
       searchData = searchResults.videos[0];
       videoUrl = searchData.url;
+      videoID = searchData.videoId;
+    } else {
+      // Extract video ID from URL
+      const match = q.match(/(?:youtu\.be\/|youtube\.com\/(?:.*v=|.*\/|.*vi?=))([^&?/\s]+)/);
+      videoID = match ? match[1] : null;
     }
 
     // Fetch download link from API
@@ -34,23 +38,39 @@ cmd({
 
     const ytData = searchData || {
       title: data.data.title,
-      thumbnail: `https://i.ytimg.com/vi/${videoUrl.split("v=")[1]}/maxresdefault.jpg`,
-      timestamp: "Unknown"
+      thumbnail: videoID ? `https://i.ytimg.com/vi/${videoID}/maxresdefault.jpg` : null,
+      timestamp: "Unknown",
+      author: "Unknown",
+      views: "Unknown",
+      ago: "Unknown"
     };
 
     const caption = `╭━━━〔 *YT DOWNLOADER* 〕━━━⊷\n`
       + `┃ 📌 *Title:* ${ytData.title}\n`
+      + `┃ 🎭 *Channel:* ${ytData.author.name || "Unknown"}\n`
+      + `┃ 👁‍🗨 *Views:* ${ytData.views}\n`
+      + `┃ 🕒 *Uploaded:* ${ytData.ago}\n`
       + `┃ ⏳ *Duration:* ${ytData.timestamp}\n`
       + `╰━━━━━━━━━━━━━━━⪼\n\n`
       + `🎬 *Download Options:*\n`
       + `1️⃣  *Video*\n`
       + `2️⃣  *Document*\n`
       + `3️⃣  *Audio*\n\n`
-      + `📌 *Please reply with 1, 2, or 3.*`;
+      + `📌 *Reply with the number to download in your choice.*`;
 
     const sentMsg = await conn.sendMessage(from, {
-      image: { url: ytData.thumbnail },
-      caption: caption
+      image: { url: ytData.thumbnail || "https://i.ibb.co/4pzL3v2/no-thumbnail.jpg" },
+      caption: caption,
+      contextInfo: {
+        mentionedJid: [m.sender],
+        forwardingScore: 999,
+        isForwarded: true,
+        forwardedNewsletterMessageInfo: {
+          newsletterJid: "120363354023106228@newsletter",
+          newsletterName: "JawadTechX",
+          serverMessageId: 143
+        }
+      }
     }, { quoted: m });
 
     const messageID = sentMsg.key.id;
