@@ -10,46 +10,46 @@ cmd({
   filename: __filename
 }, async (conn, m, store, { from, quoted, args, q, reply }) => {
   try {
-    if (!q || (!q.startsWith("https://") && args.length < 1)) {
-      return conn.sendMessage(from, { text: "*`Provide a YouTube URL or search query.`*" }, { quoted: m });
+    if (!q) {
+      return reply("*`Please provide a YouTube link or title!`*");
     }
 
     await conn.sendMessage(from, { react: { text: '⏳', key: m.key } });
 
-    let videoURL, betterThumbnail, videoTitle;
+    let videoUrl = q;
+    let searchData = null;
 
-    if (q.startsWith("https://")) {
-      videoURL = q;
-    } else {
-      const search = await yts(q);
-      const firstResult = search.videos[0];
+    // If the user provides a title instead of a link
+    if (!q.startsWith("https://")) {
+      const searchResults = await yts(q);
+      if (!searchResults.videos.length) return reply("*No results found!*");
 
-      if (!firstResult) return reply("*`No results found.`*");
-
-      videoURL = firstResult.url;
-      betterThumbnail = firstResult.thumbnail;
-      videoTitle = firstResult.title;
+      searchData = searchResults.videos[0];
+      videoUrl = searchData.url;
     }
 
-    const apiUrl = `https://velyn.vercel.app/api/downloader/ytmp4?url=${videoURL}`;
+    // Fetch download link from API
+    const { data } = await axios.get(`https://velyn.vercel.app/api/downloader/ytmp4?url=${videoUrl}`);
+    if (!data.status) return reply("*Failed to fetch video!*");
 
-    const videoResponse = await axios.get(apiUrl);
-    const videoData = videoResponse.data.data;
-    
-    const finalThumbnail = betterThumbnail || videoData.thumbnail;
-    const title = videoTitle || videoData.title;
-    
-    const caption = `╭━━━━〔 *YT DOWNLOADER* 〕━━━⊷\n`
-      + `┃ 🎬 *Title:* ${title}\n`
-      + `╰━━━━━━━━━━━━━━━━━━━⪼\n\n`
-      + `📌 *Choose Your Download Option:*\n`
-      + `1️⃣  *Video* 📹\n`
-      + `2️⃣  *Document* 📁\n`
-      + `3️⃣  *Audio* 🎵\n\n`
-      + `> *© Powered By JawadTechX 💜.*`;
+    const ytData = searchData || {
+      title: data.data.title,
+      thumbnail: `https://i.ytimg.com/vi/${videoUrl.split("v=")[1]}/maxresdefault.jpg`,
+      timestamp: "Unknown"
+    };
+
+    const caption = `╭━━━〔 *YT DOWNLOADER* 〕━━━⊷\n`
+      + `┃ 📌 *Title:* ${ytData.title}\n`
+      + `┃ ⏳ *Duration:* ${ytData.timestamp}\n`
+      + `╰━━━━━━━━━━━━━━━⪼\n\n`
+      + `🎬 *Download Options:*\n`
+      + `1️⃣  *Video*\n`
+      + `2️⃣  *Document*\n`
+      + `3️⃣  *Audio*\n\n`
+      + `📌 *Please reply with 1, 2, or 3.*`;
 
     const sentMsg = await conn.sendMessage(from, {
-      image: { url: finalThumbnail },
+      image: { url: ytData.thumbnail },
       caption: caption
     }, { quoted: m });
 
@@ -66,26 +66,28 @@ cmd({
       if (isReplyToBot) {
         await conn.sendMessage(senderID, { react: { text: '⬇️', key: receivedMsg.key } });
 
+        let downloadLink = data.data.url;
+
         switch (receivedText) {
           case "1":
             await conn.sendMessage(senderID, {
-              video: { url: videoData.url },
-              caption: "🎬 *Powered By JawadTechX 💜*"
+              video: { url: downloadLink },
+              caption: "Powered By JawadTechX 💜"
             }, { quoted: receivedMsg });
             break;
 
           case "2":
             await conn.sendMessage(senderID, {
-              document: { url: videoData.url },
+              document: { url: downloadLink },
               mimetype: "video/mp4",
-              fileName: "YouTube_Video.mp4",
-              caption: "📁 *Powered By JawadTechX 💜*"
+              fileName: `${ytData.title}.mp4`,
+              caption: "Powered By JawadTechX 💜"
             }, { quoted: receivedMsg });
             break;
 
           case "3":
             await conn.sendMessage(senderID, {
-              audio: { url: videoData.url },
+              audio: { url: downloadLink },
               mimetype: "audio/mpeg"
             }, { quoted: receivedMsg });
             break;
@@ -100,6 +102,6 @@ cmd({
 
   } catch (error) {
     console.log(error);
-    reply("❌ *Error fetching video. Try again later!*");
+    reply("⚠️ *Error fetching video!*");
   }
 });
