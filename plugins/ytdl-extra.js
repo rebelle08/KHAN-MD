@@ -4,59 +4,54 @@ const axios = require("axios");
 
 cmd({
   pattern: "yt",
-  alias: ["youtube", "jk"],
+  alias: ["youtube"],
   desc: "Download YouTube videos",
   category: "download",
   filename: __filename
 }, async (conn, m, store, { from, quoted, args, q, reply }) => {
   try {
-    if (!q) {
-      return reply("🚨 *Please provide a YouTube URL or search term!*");
+    if (!q || (!q.startsWith("https://") && args.length < 1)) {
+      return conn.sendMessage(from, { text: "*`Provide a YouTube URL or search query.`*" }, { quoted: m });
     }
 
     await conn.sendMessage(from, { react: { text: '⏳', key: m.key } });
 
-    let videoURL;
+    let videoURL, betterThumbnail, videoTitle;
+
     if (q.startsWith("https://")) {
       videoURL = q;
     } else {
-      const searchResults = await yts(q);
-      if (!searchResults.videos.length) {
-        await conn.sendMessage(from, { react: { text: '❌', key: m.key } });
-        return reply("❌ *No results found!*");
-      }
-      videoURL = searchResults.videos[0].url;
+      const search = await yts(q);
+      const firstResult = search.videos[0];
+
+      if (!firstResult) return reply("*`No results found.`*");
+
+      videoURL = firstResult.url;
+      betterThumbnail = firstResult.thumbnail;
+      videoTitle = firstResult.title;
     }
 
     const apiUrl = `https://velyn.vercel.app/api/downloader/ytmp4?url=${videoURL}`;
-    const { data } = await axios.get(apiUrl);
-    if (!data.status) {
-      await conn.sendMessage(from, { react: { text: '❌', key: m.key } });
-      return reply("❌ *Failed to fetch video!*");
-    }
 
-    const videoData = data.data;
-
-    const caption = `🎬 *YOUTUBE DOWNLOADER* 💸\n`
-      + `────────────────────\n`
-      + `📌 *Title:* ${videoData.title}\n`
-      + `🕒 *Duration:* ${videoData.duration}\n`
-      + `👀 *Views:* ${videoData.views}\n`
-      + `🔗 *Link:* ${videoURL}\n`
-      + `────────────────────\n\n`
-      + `📥 *Choose Your Format:* ⬇️\n`
-      + `1️⃣ *Video (MP4)* 📹\n`
-      + `2️⃣ *Audio (MP3)* 🎵\n`
-      + `3️⃣ *Voice Note (OGG)* 🎙️\n`
-      + `4️⃣ *Document (MP4)* 📄\n\n`
-      + `⚡ *Reply with the number to download*`;
+    const videoResponse = await axios.get(apiUrl);
+    const videoData = videoResponse.data.data;
+    
+    const finalThumbnail = betterThumbnail || videoData.thumbnail;
+    const title = videoTitle || videoData.title;
+    
+    const caption = `╭━━━━〔 *YT DOWNLOADER* 〕━━━⊷\n`
+      + `┃ 🎬 *Title:* ${title}\n`
+      + `╰━━━━━━━━━━━━━━━━━━━⪼\n\n`
+      + `📌 *Choose Your Download Option:*\n`
+      + `1️⃣  *Video* 📹\n`
+      + `2️⃣  *Document* 📁\n`
+      + `3️⃣  *Audio* 🎵\n\n`
+      + `> *© Powered By JawadTechX 💜.*`;
 
     const sentMsg = await conn.sendMessage(from, {
-      image: { url: videoData.url },
+      image: { url: finalThumbnail },
       caption: caption
     }, { quoted: m });
-
-    await conn.sendMessage(from, { react: { text: '✅', key: m.key } });
 
     const messageID = sentMsg.key.id;
 
@@ -69,57 +64,42 @@ cmd({
       const isReplyToBot = receivedMsg.message.extendedTextMessage?.contextInfo?.stanzaId === messageID;
 
       if (isReplyToBot) {
-        await conn.sendMessage(senderID, { react: { text: '⏳', key: receivedMsg.key } });
+        await conn.sendMessage(senderID, { react: { text: '⬇️', key: receivedMsg.key } });
 
-        try {
-          switch (receivedText) {
-            case "1":
-              await conn.sendMessage(senderID, {
-                video: { url: videoData.url },
-                caption: "🎥 *Here is your video!*\n\n💜 *Powered By JawadTechX*"
-              }, { quoted: receivedMsg });
-              break;
+        switch (receivedText) {
+          case "1":
+            await conn.sendMessage(senderID, {
+              video: { url: videoData.url },
+              caption: "🎬 *Powered By JawadTechX 💜*"
+            }, { quoted: receivedMsg });
+            break;
 
-            case "2":
-              await conn.sendMessage(senderID, {
-                audio: { url: videoData.url },
-                mimetype: "audio/mpeg"
-              }, { quoted: receivedMsg });
-              break;
+          case "2":
+            await conn.sendMessage(senderID, {
+              document: { url: videoData.url },
+              mimetype: "video/mp4",
+              fileName: "YouTube_Video.mp4",
+              caption: "📁 *Powered By JawadTechX 💜*"
+            }, { quoted: receivedMsg });
+            break;
 
-            case "3":
-              await conn.sendMessage(senderID, {
-                audio: { url: videoData.url },
-                mimetype: "audio/ogg",
-                ptt: true
-              }, { quoted: receivedMsg });
-              break;
+          case "3":
+            await conn.sendMessage(senderID, {
+              audio: { url: videoData.url },
+              mimetype: "audio/mpeg"
+            }, { quoted: receivedMsg });
+            break;
 
-            case "4":
-              await conn.sendMessage(senderID, {
-                document: { url: videoData.url },
-                mimetype: "video/mp4",
-                fileName: `${videoData.title}.mp4`,
-                caption: "📄 *Here is your document!*\n\n💜 *Powered By JawadTechX*"
-              }, { quoted: receivedMsg });
-              break;
-
-            default:
-              reply("❌ *Invalid option! Please reply with 1, 2, 3, or 4.*");
-              return;
-          }
-          await conn.sendMessage(senderID, { react: { text: '✅', key: receivedMsg.key } });
-        } catch (error) {
-          console.log(error);
-          await conn.sendMessage(senderID, { react: { text: '❌', key: receivedMsg.key } });
-          reply("❌ *An error occurred while processing your request.*");
+          default:
+            reply("❌ Invalid option! Please reply with 1, 2, or 3.");
         }
+
+        await conn.sendMessage(senderID, { react: { text: '✅', key: receivedMsg.key } });
       }
     });
 
   } catch (error) {
     console.log(error);
-    await conn.sendMessage(from, { react: { text: '❌', key: m.key } });
-    reply("❌ *An error occurred while processing your request.*");
+    reply("❌ *Error fetching video. Try again later!*");
   }
 });
