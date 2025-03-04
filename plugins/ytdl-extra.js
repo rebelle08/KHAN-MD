@@ -4,7 +4,7 @@ const axios = require("axios");
 
 cmd({
   pattern: "play",
-  alias: ["youtube"],
+  alias: ["yt", "song", "video", "audio"],
   desc: "Download YouTube videos",
   category: "download",
   filename: __filename
