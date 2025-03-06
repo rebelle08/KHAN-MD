@@ -5,7 +5,7 @@ cmd({
   pattern: "ytstalk",
   alias: ["ytinfo"],
   desc: "Get details about a YouTube channel.",
-  react: "🔍",
+  react: "💸",
   category: "search",
   filename: __filename
 }, async (conn, m, store, { from, quoted, q, reply }) => {
@@ -22,7 +22,7 @@ cmd({
     const { data } = await axios.get(apiUrl);
 
     if (!data || !data.status || !data.data) {
-      return reply("⚠️ Failed to fetch YouTube channel details. Ensure the username or ID is correct.");
+      return reply("🙂 Failed to fetch YouTube channel details. Ensure the username or ID is correct.");
     }
 
     const yt = data.data;
@@ -32,7 +32,7 @@ cmd({
       + `┃🎥 *Videos:* ${yt.video_count}\n`
       + `┃🔗 *Channel Link:* (${yt.channel})\n`
       + `╰━━━⪼\n\n`
-      + `🔹 *Powered By KHAN MD*`;
+      + `🔹 *Powered By KHAN MD ✅*`;
 
     await conn.sendMessage(from, {
       image: { url: yt.avatar },
