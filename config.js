@@ -7,6 +7,10 @@ function convertToBool(text, fault = 'true') {
 module.exports = {
 SESSION_ID: process.env.SESSION_ID || "",
 // add your Session Id 
+HEROKU_APP_NAME: process.env.HEROKU_APP_NAME || "Your-Heroku-App-Name",
+// add heorku app name 
+HEROKU_API_KEY: process.env.HEROKU_API_KEY || "Your-Heroku-API-Key",
+// add api heroku key for update 
 AUTO_STATUS_SEEN: process.env.AUTO_STATUS_SEEN || "true",
 // make true or false status auto seen
 AUTO_STATUS_REPLY: process.env.AUTO_STATUS_REPLY || "false",
