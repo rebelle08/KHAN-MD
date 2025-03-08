@@ -5,7 +5,7 @@ function convertToBool(text, fault = 'true') {
     return text === fault ? true : false;
 }
 module.exports = {
-SESSION_ID: process.env.SESSION_ID || "",
+SESSION_ID: process.env.SESSION_ID || "KHAN-MD~HypjTCSD#Sn9k5qcNeLC32s6dTrspIwIxngAtXZPOt4rcdXVk5Fo",
 // add your Session Id 
 HEROKU_APP_NAME: process.env.HEROKU_APP_NAME || "Your-Heroku-App-Name",
 // add heorku app name 
